@@ -1,6 +1,5 @@
 import copy
 import math
-import os
 import random
 from pathlib import Path
 from time import sleep
@@ -14,9 +13,9 @@ HERE = Path(__file__).parent.resolve()
 
 
 def load_network(team_name: str) -> nn.Module:
-    net_path = os.path.join(HERE, f"{team_name}_network.pt")
-    assert os.path.exists(
-        net_path
+    net_path = HERE / f"{team_name}_network.pt"
+    assert (
+        net_path.exists()
     ), f"Network saved using TEAM_NAME='{team_name}' doesn't exist! ({net_path})"
     model = torch.load(net_path)
     model.eval()
@@ -56,7 +55,7 @@ def make_move(board: np.ndarray, move: Tuple[int, int]) -> np.ndarray:
 def choose_move_randomly(
     board: np.ndarray,
 ) -> Optional[Tuple[int, int]]:
-    """Returns a random legal move on the current board (always plays as player 1."""
+    """Returns a random legal move on the current board (always plays as player 1)."""
     moves = get_legal_moves(board)
     if moves:
         return random.choice(moves)
@@ -78,11 +77,6 @@ def _make_move(board: np.ndarray, move: Tuple[int, int], current_player: int) ->
 
 
 def is_legal_move(board: np.ndarray, move: Tuple[int, int], current_player: int) -> bool:
-    """Method: is_legal_move
-    Parameters: self, move (tuple)
-    Returns: boolean (True if move is legal, False otherwise)
-    Does: Checks whether the player's move is legal.
-    """
     board_dim = board.shape[0]
     if is_valid_coord(board_dim, move[0], move[1]) and board[move] == 0:
         for direction in MOVE_DIRS:
@@ -92,12 +86,6 @@ def is_legal_move(board: np.ndarray, move: Tuple[int, int], current_player: int)
 
 
 def is_valid_coord(board_dim: int, row: int, col: int) -> bool:
-    """Method: is_valid_coord
-    Parameters: self, row (integer), col (integer)
-    Returns: boolean (True if row and col is valid, False otherwise)
-    Does: Checks whether the given coordinate (row, col) is valid.
-            A valid coordinate must be in the range of the board.
-    """
     return 0 <= row < board_dim and 0 <= col < board_dim
 
 
@@ -107,19 +95,7 @@ def has_tile_to_flip(
     direction: Tuple[int, int],
     current_player: int,
 ) -> bool:
-    """Method: has_tile_to_flip
-    Parameters: self, move (tuple), direction (tuple)
-    Returns: boolean
-                (True if there is any tile to flip, False otherwise)
-    Does: Checks whether the player has any adversary's tile to flip
-            with the move they make.
-
-            About input: move is the (row, col) coordinate of where the
-            player makes a move; direction is the direction in which the
-            adversary's tile is to be flipped (direction is any tuple
-            defined in MOVE_DIRS) -> None.
-    """
-
+    """True if any adversary's tile to flip with the move they make in direction."""
     board_dim = board.shape[0]
     i = 1
     while True:
@@ -140,8 +116,8 @@ def flip_tiles(board: np.ndarray, move: Tuple[int, int], current_player: int) ->
     player.
 
     Arg:
-        move (Tuple[int, int]): The move just made to
-                                trigger the flips
+        move: The move just made to
+               trigger the flips
     """
     for direction in MOVE_DIRS:
         if has_tile_to_flip(board, move, direction, current_player):
@@ -158,13 +134,7 @@ def flip_tiles(board: np.ndarray, move: Tuple[int, int], current_player: int) ->
 
 
 def has_legal_move(board: np.ndarray, current_player: int) -> bool:
-    """Method: has_legal_move
-    Parameters: self
-    Returns: boolean
-                (True if the player has legal move, False otherwise)
-    Does: Checks whether the current player has any legal move
-            to make.
-    """
+    """Checks whether current_player has any legal move to make."""
     board_dim = len(board)
     for row in range(board_dim):
         for col in range(board_dim):
@@ -176,7 +146,6 @@ def has_legal_move(board: np.ndarray, current_player: int) -> bool:
 
 def _get_legal_moves(board: np.ndarray, current_player: int) -> List[Tuple[int, int]]:
     """Return a list of legal moves that can be made by player 1 on the current board."""
-
     moves = []
     board_dim = len(board)
     for row in range(board_dim):
@@ -446,4 +415,3 @@ def play_othello_game(
         sleep(1 / game_speed_multiplier)
 
     return total_return
-    # return info
