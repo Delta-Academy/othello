@@ -1,6 +1,5 @@
 numpy
 pygame
-pytest
 tqdm
 torch
-pre-commit
+delta-utils
