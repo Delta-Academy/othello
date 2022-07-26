@@ -2,16 +2,12 @@ import random
 from typing import Optional, Tuple
 
 import numpy as np
-
 import pytest
-from game_mechanics import (
-    OthelloEnv,
-    _get_legal_moves,
-    choose_move_randomly,
-)
+
+from game_mechanics import OthelloEnv, _get_legal_moves, is_legal_move
 
 
-def choose_move4x4(state) -> Optional[Tuple[int, int]]:
+def choose_move4x4(state: np.ndarray) -> Optional[Tuple[int, int]]:
     board = np.array(
         [
             [0] * 4,
@@ -193,70 +189,34 @@ def test_4x4() -> None:
     assert game.tile_count[-1] == 4
 
 
-# def test_8x8() -> None:
-#     game = OthelloEnv(opponent_choose_move=choose_move4x4, board_dim=4)
+def test_no_legal_moves() -> None:
+    board = np.array(
+        [[1.0, 1.0, 1.0, 0.0], [1.0, 1.0, 1.0, -1.0], [1.0, 1.0, 1.0, 0.0], [0.0, -1.0, -1.0, -1.0]]
+    )
+    assert not _get_legal_moves(board, 1)
+    assert not _get_legal_moves(board, -1)
 
-#     expected = np.array(
-#         [
-#             [0] * 8,
-#             [0] * 8,
-#             [0] * 8,
-#             [0, 0, 0, -1, 1, 0, 0, 0],
-#             [0, 0, 0, 1, -1, 0, 0, 0],
-#             [0] * 8,
-#             [0] * 8,
-#             [0] * 8,
-#         ]
-#     )
-#     np.testing.assert_array_equal(game._board, expected)
 
-#     expected = np.array(
-#         [
-#             [0] * 8,
-#             [0] * 8,
-#             [0] * 8,
-#             [0, 0, 1, 1, 1, 0, 0, 0],
-#             [0, 0, 0, 1, -1, 0, 0, 0],
-#             [0] * 8,
-#             [0] * 8,
-#             [0] * 8,
-#         ]
-#     )
-#     np.testing.assert_array_equal(game._board, expected)
+def test_is_legal_move_one_player_only() -> None:
 
-#     expected = np.array(
-#         [
-#             [0] * 8,
-#             [0] * 8,
-#             [0, 0, 0, 0, -1, 0, 0, 0],
-#             [0, 0, 1, 1, -1, 0, 0, 0],
-#             [0, 0, 0, 1, -1, 0, 0, 0],
-#             [0] * 8,
-#             [0] * 8,
-#             [0] * 8,
-#         ]
-#     )
-#     np.testing.assert_array_equal(game._board, expected)
+    board = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        ]
+    )
+    move = (7, 7)
+    current_player = -1
+    assert not is_legal_move(board, move, current_player)
 
-#     expected = np.array(
-#         [
-#             [0] * 8,
-#             [0, 0, 0, 0, 0, 1, 0, 0],
-#             [0, 0, 0, 0, 1, 0, 0, 0],
-#             [0, 0, 1, 1, -1, 0, 0, 0],
-#             [0, 0, 0, 1, -1, 0, 0, 0],
-#             [0] * 8,
-#             [0] * 8,
-#             [0] * 8,
-#         ]
-#     )
-#     np.testing.assert_array_equal(game._board, expected)
-#     while not game.game_over:
-#         game.make_random_move()
-#         print(game.running_tile_count)
-#         print(game._board)
-#     assert game.running_tile_count > 58  # Arbitrary, probably true
-#     assert game.running_tile_count <= 64
+    current_player = 1
+    assert is_legal_move(board, move, current_player)
 
 
 def test_illegal_move() -> None:
