@@ -4,6 +4,7 @@ from pathlib import Path
 from time import sleep
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+import numba as nb
 import numpy as np
 import torch
 import torch.nn as nn
@@ -57,7 +58,9 @@ def choose_move_randomly(
     """Returns a random legal move on the current board (always plays as player 1)."""
     moves = get_legal_moves(board)
     if moves:
-        return random.choice(moves)
+        # Faster than random from moves directly
+        idx = random.choice(range(0, len(moves)))
+        return moves[idx]
     return None
 
 
@@ -130,27 +133,37 @@ def get_vectors(
     return vertical, horizontal, diag1, diag2
 
 
-# TODO: Improve me
-POSSIBLE_PATTERNS = [
-    memoryview(np.array([100, -1, 1]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([100, -1, -1, 1]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([100, -1, -1, -1, 1]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([100, -1, -1, -1, -1, 1]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([100, -1, -1, -1, -1, -1, 1]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([100, -1, -1, -1, -1, -1, -1, 1]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([1, -1, 100]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([1, -1, -1, 100]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([1, -1, -1, -1, 100]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([1, -1, -1, -1, -1, 100]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([1, -1, -1, -1, -1, -1, 100]).astype(float)).tobytes(),  # type: ignore
-    memoryview(np.array([1, -1, -1, -1, -1, -1, -1, 100]).astype(float)).tobytes(),  # type: ignore
+@nb.jit(parallel=True)
+def is_sub_arr(a1, a2):
+    for i in nb.prange(len(a1) - len(a2) + 1):
+        for j in range(len(a2)):
+            if a1[i + j] != a2[j]:
+                break
+        else:
+            return True
+    return False
+
+
+# Current only works for dim<=8 and not optimised for smaller
+MATCHES = [
+    np.array([2, -1, 1]).astype(float),
+    np.array([2, -1, -1, 1]).astype(float),
+    np.array([2, -1, -1, -1, 1]).astype(float),
+    np.array([2, -1, -1, -1, -1, 1]).astype(float),
+    np.array([2, -1, -1, -1, -1, -1, 1]).astype(float),
+    np.array([2, -1, -1, -1, -1, -1, -1, 1]).astype(float),
+    np.array([1, -1, 2]).astype(float),
+    np.array([1, -1, -1, 2]).astype(float),
+    np.array([1, -1, -1, -1, 2]).astype(float),
+    np.array([1, -1, -1, -1, -1, 2]).astype(float),
+    np.array([1, -1, -1, -1, -1, -1, 2]).astype(float),
+    np.array([1, -1, -1, -1, -1, -1, -1, 2]).astype(float),
 ]
 
 
 def has_flip(line: np.ndarray) -> bool:
-    memory_view = memoryview(line).tobytes()  # type: ignore
-    for pattern in POSSIBLE_PATTERNS:
-        if pattern in memory_view:
+    for match in MATCHES:
+        if is_sub_arr(line, match):
             return True
     return False
 
@@ -162,7 +175,8 @@ def has_tile_to_flip(
 ) -> bool:
     """Checks if there is a tile to flip in any direction following move."""
     board_check = board.copy()
-    board_check[move] = 100 * current_player
+    # Mark the potential move as a 2, to distinguish from existing counters
+    board_check[move] = 2 * current_player
     for vector in get_vectors(board_check * current_player, move):
         if has_flip(vector):
             return True

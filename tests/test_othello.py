@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 import numpy as np
 import pytest
 
-from game_mechanics import OthelloEnv, _get_legal_moves, is_legal_move
+from game_mechanics import OthelloEnv, _get_legal_moves, has_flip, is_legal_move
 
 
 def choose_move4x4(state: np.ndarray) -> Optional[Tuple[int, int]]:
@@ -128,7 +128,7 @@ def test_4x4() -> None:
             [0, 1, -1, 0],
             [0] * 4,
         ]
-    )
+    ).astype(float)
     np.testing.assert_array_equal(game._board, expected)
 
     game.step(choose_move4x4(game._board))
@@ -140,7 +140,7 @@ def test_4x4() -> None:
             [0, 1, 1, 0],
             [0, 0, 1, 0],
         ]
-    )
+    ).astype(float)
     np.testing.assert_array_equal(game._board, expected)
     game.step(choose_move4x4(game._board))
     assert not game.game_over
@@ -151,7 +151,7 @@ def test_4x4() -> None:
             [0, 1, 1, 0],
             [0, 0, 1, 0],
         ]
-    )
+    ).astype(float)
     np.testing.assert_array_equal(game._board, expected)
 
     assert not game.game_over
@@ -163,7 +163,7 @@ def test_4x4() -> None:
             [0, 1, -1, 0],
             [0, -1, 1, 0],
         ]
-    )
+    ).astype(float)
     np.testing.assert_array_equal(game._board, expected)
 
     assert not game.game_over
@@ -175,7 +175,7 @@ def test_4x4() -> None:
             [0, 1, 1, 0],
             [0, -1, -1, -1],
         ]
-    )
+    ).astype(float)
     np.testing.assert_array_equal(game._board, expected)
 
     game.step(choose_move4x4(game._board))
@@ -217,6 +217,14 @@ def test_is_legal_move_one_player_only() -> None:
 
     current_player = 1
     assert is_legal_move(board, move, current_player)
+
+
+def test_has_flip() -> None:
+    line = np.array([0, 0, 0, 1, -1, -1, 2]).astype(float)
+    assert has_flip(line)
+
+    line = np.array([0, 1, -1, 1, -1, 1, 2]).astype(float)
+    assert not has_flip(line)
 
 
 def test_illegal_move() -> None:
