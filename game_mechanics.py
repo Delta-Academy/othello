@@ -134,7 +134,8 @@ def get_vectors(
 
 
 @nb.jit(parallel=True)
-def is_sub_arr(a1, a2):
+def is_sub_arr(a1: np.ndarray, a2: np.ndarray) -> bool:
+    """is a2 a subarray of a1?"""
     for i in nb.prange(len(a1) - len(a2) + 1):
         for j in range(len(a2)):
             if a1[i + j] != a2[j]:
