@@ -58,10 +58,7 @@ def choose_move_randomly(
     """Returns a random legal move on the current board (always plays as player 1)."""
     moves = get_legal_moves(board)
     if moves:
-        # Fast rng using microsecond digit of time
-        # gives uniform distribution 0-99
-        idx = int(time.time() * 100000) % len(moves)
-        return moves[idx]
+        return random.choice(moves)
     return None
 
 
@@ -264,7 +261,7 @@ def _get_legal_moves(board: np.ndarray, current_player: int) -> List[Tuple[int, 
     return [move for move in possible_moves if is_legal_move(board, move, current_player)]
 
 
-def get_empty_board(board_dim: int = 6, player_start: int = 1) -> np.ndarray:
+def get_empty_board(board_dim: int = 8, player_start: int = 1) -> np.ndarray:
     board = np.zeros((board_dim, board_dim))
     if board_dim < 2:
         return board
