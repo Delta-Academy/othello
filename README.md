@@ -53,11 +53,11 @@ The competition is a knockout tournament where your AI will play other teams' AI
 
 We follow the Othello World Championship Rules. Each 1-v-1 matchup consists of up to 3 games. The **first player to play** the first game is chosen randomly. The other player starts the second game. The starter of the third game, if one is necessary, is the player who, in total over games 1 & 2, had the most discs. If this is a tie, the draw is made randomly.
 
-The winner of the matchup is the winner of more of the 3 games. If this is tied, the total number of discs at the end of the games shall be used to determine the winner.  If this is a tie, then both teams progress to the next round with one of the teams as their representative.
+The winner of the matchup is the winner of more of the 3 games. If this is tied, the total number of discs at the end of the games shall be used to determine the winner. If this is a tie, then both teams progress to the next round with one of the teams as their representative.
 
-E.g. if player 1 wins 2 games, they win overall.
+E.g. if a player wins 2 games, they win overall.
 
-If player 1 wins 1, draws 1 and loses 1, then the difference in number of pieces between the win and the loss decides the matchup (since the draw has an equal number of pieces).
+If both players win 1, draw 1 and lose 1, then the difference in the number of pieces between the win and the loss decides the matchup (since the draw has an equal number of pieces).
 
 The competition & discussion will be in [Gather Town](https://app.gather.town/app/nJwquzJjD4TLKcTy/Delta%20Academy) at **5pm GMT on Sunday** (60 mins after submission deadline)!
 
