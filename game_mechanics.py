@@ -60,7 +60,7 @@ def choose_move_randomly(
     if moves:
         # Fast rng using microsecond digit of time
         # gives uniform distribution 0-99
-        idx = int(time.time()) % 100 % len(moves)
+        idx = int(time.time() * 100000) % len(moves)
         return moves[idx]
     return None
 
@@ -434,68 +434,11 @@ class OthelloEnv:
             return False
         return True
 
-    ## TODO: Pygame stuff
-    # def __del__(self):
-    #     """Destructor, quit pygame if game over."""
-    #     if self._screen is not None:
-    #         pygame.quit()
-
-    # def render(self) -> None:
-    #     """Renders game in pygame."""
-    #     if self._screen is None:
-    #         pygame.init()
-    #         self._screen = pygame.display.set_mode(
-    #             (self.SQUARE_SIZE * self.N_COLS, self.SQUARE_SIZE * self.N_ROWS)
-    #         )
-
-    #     # Draw background of the board
-    #     pygame.gfxdraw.box(
-    #         self._screen,
-    #         pygame.Rect(
-    #             0,
-    #             0,
-    #             self.N_COLS * self.SQUARE_SIZE,
-    #             self.N_ROWS * self.SQUARE_SIZE,
-    #         ),
-    #         self.BLUE_COLOR,
-    #     )
-
-    #     # Draw the circles - either as spaces if filled or
-    #     for r in range(self.N_ROWS):
-    #         for c in range(self.N_COLS):
-    #             space = self._board[r, c]
-    #             colour = (
-    #                 self.RED_COLOR
-    #                 if space == 1
-    #                 else self.YELLOW_COLOR
-    #                 if space == -1
-    #                 else self.BACKGROUND_COLOR
-    #             )
-
-    #             # Anti-aliased circle drawing
-    #             pygame.gfxdraw.aacircle(
-    #                 self._screen,
-    #                 c * self.SQUARE_SIZE + self.SQUARE_SIZE // 2,
-    #                 r * self.SQUARE_SIZE + self.SQUARE_SIZE // 2,
-    #                 int(self.DISC_SIZE_RATIO * self.SQUARE_SIZE / 2),
-    #                 colour,
-    #             )
-
-    #             pygame.gfxdraw.filled_circle(
-    #                 self._screen,
-    #                 c * self.SQUARE_SIZE + self.SQUARE_SIZE // 2,
-    #                 r * self.SQUARE_SIZE + self.SQUARE_SIZE // 2,
-    #                 int(self.DISC_SIZE_RATIO * self.SQUARE_SIZE / 2),
-    #                 colour,
-    #             )
-    #     pygame.display.update()
-
 
 def play_othello_game(
     your_choose_move: Callable[[np.ndarray], Optional[Tuple[int, int]]],
     opponent_choose_move: Callable[[np.ndarray], Optional[Tuple[int, int]]],
     game_speed_multiplier: float = 1,
-    render: bool = False,
     verbose: bool = False,
 ) -> int:
     """Play a game where moves are chosen by `your_choose_move()` and `opponent_choose_move()`. Who
@@ -504,25 +447,21 @@ def play_othello_game(
     Args:
         your_choose_move: function that chooses move (takes state as input)
         opponent_choose_move: function that picks your opponent's next move
-        game_speed_multiplier: multiplies the speed of the game. High == fast
-        render: whether to render the game using pygame or not
         verbose: whether to print board states to console. Useful for debugging
+        game_speed_multiplier: multiplies the speed of the game. High == fast
+                               (only has an effect when verbose=True)
 
     Returns: total_return, which is the sum of return from the game
     """
     total_return = 0
     game = OthelloEnv(opponent_choose_move)
     state, reward, done, info = game.reset(verbose)
-    # if render:
-    #     game.render()
     if verbose:
         time.sleep(1 / game_speed_multiplier)
 
     while not done:
         action = your_choose_move(state)
         state, reward, done, info = game.step(action, verbose)
-        # if render:
-        #     game.render()
         total_return += reward
         if verbose:
             time.sleep(1 / game_speed_multiplier)
