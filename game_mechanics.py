@@ -1,10 +1,10 @@
 import copy
-import math
 import random
+import time
 from pathlib import Path
-from time import sleep
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+import numba as nb
 import numpy as np
 import torch
 import torch.nn as nn
@@ -58,7 +58,10 @@ def choose_move_randomly(
     """Returns a random legal move on the current board (always plays as player 1)."""
     moves = get_legal_moves(board)
     if moves:
-        return random.choice(moves)
+        # Fast rng using microsecond digit of time
+        # gives uniform distribution 0-99
+        idx = int(time.time() * 100000) % len(moves)
+        return moves[idx]
     return None
 
 
@@ -79,23 +82,119 @@ def _make_move(board: np.ndarray, move: Tuple[int, int], current_player: int) ->
 def is_legal_move(board: np.ndarray, move: Tuple[int, int], current_player: int) -> bool:
     board_dim = board.shape[0]
     if is_valid_coord(board_dim, move[0], move[1]) and board[move] == 0:
-        for direction in MOVE_DIRS:
-            if has_tile_to_flip(board, move, direction, current_player):
-                return True
+        if has_tile_to_flip(board, move, current_player):
+            return True
     return False
+
+
+def idx_surrounding(arr: np.ndarray, idx: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray]:
+    """Returns the indexes of the elements within a radius of 1 of the original element (arr must be
+    2d and square currently)"""
+    assert arr.shape[0] == arr.shape[1]
+    dim = arr.shape[0]
+    x, y = idx
+    for num in (x, y):
+        assert 0 <= num < dim
+    x_idx = np.arange(x - 1, x + 2)
+    y_idx = np.arange(y - 1, y + 2)
+
+    # Remove out of array indexes
+    x_idx = x_idx[np.logical_and(x_idx >= 0, x_idx < dim)]
+    y_idx = y_idx[np.logical_and(y_idx >= 0, y_idx < dim)]
+
+    return x_idx, y_idx
 
 
 def is_valid_coord(board_dim: int, row: int, col: int) -> bool:
     return 0 <= row < board_dim and 0 <= col < board_dim
 
 
+def get_vectors(
+    arr: np.ndarray, move: Tuple[int, int]
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Get all 4 vectors in arr that pass through coordinate move."""
+    dim = arr.shape[0]
+    vertical = arr[np.arange(dim), move[1]]
+    horizontal = arr[move[0], np.arange(dim)]
+
+    # Top left to bottom right diagonal
+    east = dim - max(move)
+    west = min(move)
+    row = np.arange(move[0] - west, move[0] + east)
+    col = np.arange(move[1] - west, move[1] + east)
+    diag1 = arr[row, col]
+
+    # Bottom left to top right diagonal
+    west = min(dim - 1 - move[0], move[1])
+    east = min(move[0], dim - 1 - move[1])
+    row = np.flip(np.arange(move[0] - east, move[0] + west + 1))
+    col = np.arange(move[1] - west, move[1] + east + 1)
+    diag2 = arr[row, col]
+
+    return vertical, horizontal, diag1, diag2
+
+
+@nb.jit(parallel=True)
+def is_sub_arr(a1: np.ndarray, a2: np.ndarray) -> bool:
+    """is a2 a subarray of a1?"""
+    for i in nb.prange(len(a1) - len(a2) + 1):
+        for j in range(len(a2)):
+            if a1[i + j] != a2[j]:
+                break
+        else:
+            return True
+    return False
+
+
+# Current only works for dim<=8 and not optimised for smaller
+MATCHES = [
+    np.array([2, -1, 1], dtype=float),
+    np.array([2, -1, -1, 1], dtype=float),
+    np.array([2, -1, -1, -1, 1], dtype=float),
+    np.array([2, -1, -1, -1, -1, 1], dtype=float),
+    np.array([2, -1, -1, -1, -1, -1, 1], dtype=float),
+    np.array([2, -1, -1, -1, -1, -1, -1, 1], dtype=float),
+    np.array([1, -1, 2], dtype=float),
+    np.array([1, -1, -1, 2], dtype=float),
+    np.array([1, -1, -1, -1, 2], dtype=float),
+    np.array([1, -1, -1, -1, -1, 2], dtype=float),
+    np.array([1, -1, -1, -1, -1, -1, 2], dtype=float),
+    np.array([1, -1, -1, -1, -1, -1, -1, 2], dtype=float),
+]
+
+
+def has_flip(line: np.ndarray) -> bool:
+    for match in MATCHES:
+        if is_sub_arr(line, match):
+            return True
+    return False
+
+
 def has_tile_to_flip(
+    board: np.ndarray,
+    move: Tuple[int, int],
+    current_player: int,
+) -> bool:
+    """Checks if there is a tile to flip in any direction following move."""
+    board_check = board.copy()
+    # Mark the potential move as a 2, to distinguish from existing counters
+    board_check[move] = 2 * current_player
+    for vector in get_vectors(board_check * current_player, move):
+        if has_flip(vector):
+            return True
+    return False
+
+
+def has_tile_to_flip_direction(
     board: np.ndarray,
     move: Tuple[int, int],
     direction: Tuple[int, int],
     current_player: int,
 ) -> bool:
-    """True if any adversary's tile to flip with the move they make in direction."""
+    """Following move, check if there is a tile to flip in a given direction.
+
+    n.b. This is not optimised but is called rarely so not 100% necessary
+    """
     board_dim = board.shape[0]
     i = 1
     while True:
@@ -120,7 +219,7 @@ def flip_tiles(board: np.ndarray, move: Tuple[int, int], current_player: int) ->
                trigger the flips
     """
     for direction in MOVE_DIRS:
-        if has_tile_to_flip(board, move, direction, current_player):
+        if has_tile_to_flip_direction(board, move, direction, current_player):
             i = 1
             while True:
                 row = move[0] + direction[0] * i
@@ -133,27 +232,36 @@ def flip_tiles(board: np.ndarray, move: Tuple[int, int], current_player: int) ->
     return board
 
 
+def get_possible_moves(board: np.ndarray) -> set:
+
+    board_dim = len(board)
+    zero_idx = board == 0
+    # Few empty, iterate through these (1.5 threshold chosen empirically for speed)
+    if np.sum(zero_idx) < board_dim**2 / 1.5:
+        idx_check = np.where(zero_idx)
+        to_check = set(zip(idx_check[0], idx_check[1]))
+    else:
+        to_check = set()
+        idx_pieces = np.where(~zero_idx)
+        for pos in zip(idx_pieces[0], idx_pieces[1]):
+            idxs = idx_surrounding(board, pos)
+            to_check.update(list(zip(idxs[0], idxs[1])))
+
+    return to_check
+
+
 def has_legal_move(board: np.ndarray, current_player: int) -> bool:
     """Checks whether current_player has any legal move to make."""
-    board_dim = len(board)
-    for row in range(board_dim):
-        for col in range(board_dim):
-            move = (row, col)
-            if is_legal_move(board, move, current_player):
-                return True
+    possible_moves = get_possible_moves(board)
+    for move in possible_moves:
+        if is_legal_move(board, move, current_player):
+            return True
     return False
 
 
 def _get_legal_moves(board: np.ndarray, current_player: int) -> List[Tuple[int, int]]:
-    """Return a list of legal moves that can be made by player 1 on the current board."""
-    moves = []
-    board_dim = len(board)
-    for row in range(board_dim):
-        for col in range(board_dim):
-            move = (row, col)
-            if is_legal_move(board, move, current_player):
-                moves.append(move)
-    return moves
+    possible_moves = get_possible_moves(board)
+    return [move for move in possible_moves if is_legal_move(board, move, current_player)]
 
 
 def get_empty_board(board_dim: int = 6, player_start: int = 1) -> np.ndarray:
@@ -199,7 +307,7 @@ class OthelloEnv:
         opponent_choose_move: Callable[
             [np.ndarray], Optional[Tuple[int, int]]
         ] = choose_move_randomly,
-        board_dim: int = 6,
+        board_dim: int = 8,
     ):
         self._board_visualizer = np.vectorize(lambda x: "X" if x == 1 else "O" if x == -1 else "*")
         self._opponent_choose_move = opponent_choose_move
@@ -268,7 +376,8 @@ class OthelloEnv:
         self.winner = (
             None
             if self.tile_count[1] == self.tile_count[-1] or not self.done
-            else max(self.tile_count, key=self.tile_count.get)
+            # mypy sad, probably bug: github.com/python/mypy/issues/9765
+            else max(self.tile_count, key=self.tile_count.get)  # type: ignore
         )
         won = self.done and tile_difference > 0
 
@@ -317,74 +426,19 @@ class OthelloEnv:
 
     @property
     def game_over(self) -> bool:
-        return (
-            not has_legal_move(self._board, self._player)
-            and not has_legal_move(self._board, self._player * -1)
-            or self.running_tile_count == self.board_dim**2
-        )
-
-    ## TODO: Pygame stuff
-    # def __del__(self):
-    #     """Destructor, quit pygame if game over."""
-    #     if self._screen is not None:
-    #         pygame.quit()
-
-    # def render(self) -> None:
-    #     """Renders game in pygame."""
-    #     if self._screen is None:
-    #         pygame.init()
-    #         self._screen = pygame.display.set_mode(
-    #             (self.SQUARE_SIZE * self.N_COLS, self.SQUARE_SIZE * self.N_ROWS)
-    #         )
-
-    #     # Draw background of the board
-    #     pygame.gfxdraw.box(
-    #         self._screen,
-    #         pygame.Rect(
-    #             0,
-    #             0,
-    #             self.N_COLS * self.SQUARE_SIZE,
-    #             self.N_ROWS * self.SQUARE_SIZE,
-    #         ),
-    #         self.BLUE_COLOR,
-    #     )
-
-    #     # Draw the circles - either as spaces if filled or
-    #     for r in range(self.N_ROWS):
-    #         for c in range(self.N_COLS):
-    #             space = self._board[r, c]
-    #             colour = (
-    #                 self.RED_COLOR
-    #                 if space == 1
-    #                 else self.YELLOW_COLOR
-    #                 if space == -1
-    #                 else self.BACKGROUND_COLOR
-    #             )
-
-    #             # Anti-aliased circle drawing
-    #             pygame.gfxdraw.aacircle(
-    #                 self._screen,
-    #                 c * self.SQUARE_SIZE + self.SQUARE_SIZE // 2,
-    #                 r * self.SQUARE_SIZE + self.SQUARE_SIZE // 2,
-    #                 int(self.DISC_SIZE_RATIO * self.SQUARE_SIZE / 2),
-    #                 colour,
-    #             )
-
-    #             pygame.gfxdraw.filled_circle(
-    #                 self._screen,
-    #                 c * self.SQUARE_SIZE + self.SQUARE_SIZE // 2,
-    #                 r * self.SQUARE_SIZE + self.SQUARE_SIZE // 2,
-    #                 int(self.DISC_SIZE_RATIO * self.SQUARE_SIZE / 2),
-    #                 colour,
-    #             )
-    #     pygame.display.update()
+        if self.running_tile_count == self.board_dim**2:
+            return True
+        elif has_legal_move(self._board, self._player):
+            return False
+        elif has_legal_move(self._board, self._player * -1):
+            return False
+        return True
 
 
 def play_othello_game(
     your_choose_move: Callable[[np.ndarray], Optional[Tuple[int, int]]],
     opponent_choose_move: Callable[[np.ndarray], Optional[Tuple[int, int]]],
     game_speed_multiplier: float = 1,
-    render: bool = False,
     verbose: bool = False,
 ) -> int:
     """Play a game where moves are chosen by `your_choose_move()` and `opponent_choose_move()`. Who
@@ -393,25 +447,23 @@ def play_othello_game(
     Args:
         your_choose_move: function that chooses move (takes state as input)
         opponent_choose_move: function that picks your opponent's next move
-        game_speed_multiplier: multiplies the speed of the game. High == fast
-        render: whether to render the game using pygame or not
         verbose: whether to print board states to console. Useful for debugging
+        game_speed_multiplier: multiplies the speed of the game. High == fast
+                               (only has an effect when verbose=True)
 
     Returns: total_return, which is the sum of return from the game
     """
     total_return = 0
     game = OthelloEnv(opponent_choose_move)
     state, reward, done, info = game.reset(verbose)
-    # if render:
-    #     game.render()
-    sleep(1 / game_speed_multiplier)
+    if verbose:
+        time.sleep(1 / game_speed_multiplier)
 
     while not done:
         action = your_choose_move(state)
         state, reward, done, info = game.step(action, verbose)
-        # if render:
-        #     game.render()
         total_return += reward
-        sleep(1 / game_speed_multiplier)
+        if verbose:
+            time.sleep(1 / game_speed_multiplier)
 
     return total_return

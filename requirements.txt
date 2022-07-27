@@ -3,3 +3,4 @@ pygame
 tqdm
 torch
 delta-utils
+numba
