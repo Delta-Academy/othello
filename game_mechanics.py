@@ -1,7 +1,7 @@
 import copy
 import random
+import time
 from pathlib import Path
-from time import sleep
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numba as nb
@@ -58,8 +58,10 @@ def choose_move_randomly(
     """Returns a random legal move on the current board (always plays as player 1)."""
     moves = get_legal_moves(board)
     if moves:
-        # Faster than random from moves directly
-        idx = random.choice(range(0, len(moves)))
+        # Fast rng using microsecond digit of time
+        # gives uniform distribution 0-9
+        # (len(moves) is rarely > 10)
+        idx = int(time.time()) % 10 % len(moves)
         return moves[idx]
     return None
 
@@ -87,7 +89,7 @@ def is_legal_move(board: np.ndarray, move: Tuple[int, int], current_player: int)
 
 
 def idx_surrounding(arr: np.ndarray, idx: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray]:
-    """Returns he indexes of the elements within a radius of 1 of the original element (arr must be
+    """Returns the indexes of the elements within a radius of 1 of the original element (arr must be
     2d and square currently)"""
     assert arr.shape[0] == arr.shape[1]
     dim = arr.shape[0]
@@ -147,18 +149,18 @@ def is_sub_arr(a1: np.ndarray, a2: np.ndarray) -> bool:
 
 # Current only works for dim<=8 and not optimised for smaller
 MATCHES = [
-    np.array([2, -1, 1]).astype(float),
-    np.array([2, -1, -1, 1]).astype(float),
-    np.array([2, -1, -1, -1, 1]).astype(float),
-    np.array([2, -1, -1, -1, -1, 1]).astype(float),
-    np.array([2, -1, -1, -1, -1, -1, 1]).astype(float),
-    np.array([2, -1, -1, -1, -1, -1, -1, 1]).astype(float),
-    np.array([1, -1, 2]).astype(float),
-    np.array([1, -1, -1, 2]).astype(float),
-    np.array([1, -1, -1, -1, 2]).astype(float),
-    np.array([1, -1, -1, -1, -1, 2]).astype(float),
-    np.array([1, -1, -1, -1, -1, -1, 2]).astype(float),
-    np.array([1, -1, -1, -1, -1, -1, -1, 2]).astype(float),
+    np.array([2, -1, 1], dtype=float),
+    np.array([2, -1, -1, 1], dtype=float),
+    np.array([2, -1, -1, -1, 1], dtype=float),
+    np.array([2, -1, -1, -1, -1, 1], dtype=float),
+    np.array([2, -1, -1, -1, -1, -1, 1], dtype=float),
+    np.array([2, -1, -1, -1, -1, -1, -1, 1], dtype=float),
+    np.array([1, -1, 2], dtype=float),
+    np.array([1, -1, -1, 2], dtype=float),
+    np.array([1, -1, -1, -1, 2], dtype=float),
+    np.array([1, -1, -1, -1, -1, 2], dtype=float),
+    np.array([1, -1, -1, -1, -1, -1, 2], dtype=float),
+    np.array([1, -1, -1, -1, -1, -1, -1, 2], dtype=float),
 ]
 
 
@@ -515,7 +517,7 @@ def play_othello_game(
     # if render:
     #     game.render()
     if verbose:
-        sleep(1 / game_speed_multiplier)
+        time.sleep(1 / game_speed_multiplier)
 
     while not done:
         action = your_choose_move(state)
@@ -524,6 +526,6 @@ def play_othello_game(
         #     game.render()
         total_return += reward
         if verbose:
-            sleep(1 / game_speed_multiplier)
+            time.sleep(1 / game_speed_multiplier)
 
     return total_return

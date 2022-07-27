@@ -127,8 +127,9 @@ def test_4x4() -> None:
             [0, -1, 1, 0],
             [0, 1, -1, 0],
             [0] * 4,
-        ]
-    ).astype(float)
+        ],
+        dtype=float,
+    )
     np.testing.assert_array_equal(game._board, expected)
 
     game.step(choose_move4x4(game._board))
