@@ -59,9 +59,8 @@ def choose_move_randomly(
     moves = get_legal_moves(board)
     if moves:
         # Fast rng using microsecond digit of time
-        # gives uniform distribution 0-9
-        # (len(moves) is rarely > 10)
-        idx = int(time.time()) % 10 % len(moves)
+        # gives uniform distribution 0-99
+        idx = int(time.time()) % 100 % len(moves)
         return moves[idx]
     return None
 
