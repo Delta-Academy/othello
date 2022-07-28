@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Optional, Tuple
 
-import delta_utils.check_submission as checker
 from torch import nn
 
+import delta_utils.check_submission as checker
 from game_mechanics import get_empty_board, load_network
 
 

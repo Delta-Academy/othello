@@ -12,8 +12,8 @@ import torch.nn as nn
 HERE = Path(__file__).parent.resolve()
 
 
-def load_network(team_name: str) -> nn.Module:
-    net_path = HERE / f"{team_name}_network.pt"
+def load_network(team_name: str, network_folder: Path = HERE) -> nn.Module:
+    net_path = network_folder / f"{team_name}_network.pt"
     assert (
         net_path.exists()
     ), f"Network saved using TEAM_NAME='{team_name}' doesn't exist! ({net_path})"
