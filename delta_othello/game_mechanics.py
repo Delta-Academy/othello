@@ -84,22 +84,23 @@ def is_legal_move(board: np.ndarray, move: Tuple[int, int], current_player: int)
     return False
 
 
-def idx_surrounding(arr: np.ndarray, idx: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray]:
+def idx_surrounding(arr: np.ndarray, idx: Tuple[int, int]) -> List[Tuple[int, int]]:
     """Returns the indexes of the elements within a radius of 1 of the original element (arr must be
     2d and square currently)"""
     assert arr.shape[0] == arr.shape[1]
     dim = arr.shape[0]
-    x, y = idx
-    for num in (x, y):
-        assert 0 <= num < dim
-    x_idx = np.arange(x - 1, x + 2)
-    y_idx = np.arange(y - 1, y + 2)
-
-    # Remove out of array indexes
-    x_idx = x_idx[np.logical_and(x_idx >= 0, x_idx < dim)]
-    y_idx = y_idx[np.logical_and(y_idx >= 0, y_idx < dim)]
-
-    return x_idx, y_idx
+    to_check = [
+        (idx[0] - 1, idx[1] - 1),
+        (idx[0] + 0, idx[1] - 1),
+        (idx[0] + 1, idx[1] - 1),
+        (idx[0] - 1, idx[1] - 0),
+        (idx[0] + 0, idx[1] - 0),
+        (idx[0] + 1, idx[1] - 0),
+        (idx[0] - 1, idx[1] + 1),
+        (idx[0] + 0, idx[1] + 1),
+        (idx[0] + 1, idx[1] + 1),
+    ]
+    return [coord for coord in to_check if 0 <= coord[0] < dim and 0 <= coord[1] < dim]
 
 
 def is_valid_coord(board_dim: int, row: int, col: int) -> bool:
@@ -237,12 +238,12 @@ def get_possible_moves(board: np.ndarray) -> set:
     if np.sum(zero_idx) < board_dim**2 / 1.5:
         idx_check = np.where(zero_idx)
         to_check = set(zip(idx_check[0], idx_check[1]))
-    else:
-        to_check = set()
-        idx_pieces = np.where(~zero_idx)
-        for pos in zip(idx_pieces[0], idx_pieces[1]):
-            idxs = idx_surrounding(board, pos)
-            to_check.update(list(zip(idxs[0], idxs[1])))
+    to_check = set()
+    idx_pieces = np.where(~zero_idx)
+    for pos in zip(idx_pieces[0], idx_pieces[1]):
+        idxs = idx_surrounding(board, pos)
+        # to_check.update(list(zip(idxs[0], idxs[1])))
+        to_check.update(idxs)
 
     return to_check
 
