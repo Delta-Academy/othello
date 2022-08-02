@@ -4,8 +4,9 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-import numba as nb
 import numpy as np
+
+import numba as nb
 import torch
 import torch.nn as nn
 
@@ -53,10 +54,10 @@ def make_move(board: np.ndarray, move: Tuple[int, int]) -> np.ndarray:
 
 
 def choose_move_randomly(
-    board: np.ndarray,
+    state: np.ndarray,
 ) -> Optional[Tuple[int, int]]:
     """Returns a random legal move on the current board (always plays as player 1)."""
-    moves = get_legal_moves(board)
+    moves = get_legal_moves(state)
     if moves:
         return random.choice(moves)
     return None
