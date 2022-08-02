@@ -4,7 +4,14 @@ from typing import Optional, Tuple
 import numpy as np
 import pytest
 
-from game_mechanics import OthelloEnv, _get_legal_moves, has_flip, is_legal_move
+from delta_othello.game_mechanics import (
+    OthelloEnv,
+    _get_legal_moves,
+    has_flip,
+    has_legal_move,
+    idx_surrounding,
+    is_legal_move,
+)
 
 
 def choose_move4x4(state: np.ndarray) -> Optional[Tuple[int, int]]:
@@ -233,3 +240,50 @@ def test_illegal_move() -> None:
         game = OthelloEnv()
         illegal_move = (int(game.board_dim / 2), int(game.board_dim / 2))
         game.step(illegal_move)
+
+
+def test_jacob_board() -> None:
+    board = np.array(
+        [
+            ["O", "X", "*", "*", "*", "*", "*", "*"],
+            ["X", "X", "X", "*", "*", "*", "*", "*"],
+            ["*", "X", "O", "X", "*", "*", "*", "*"],
+            ["*", "*", "X", "O", "X", "*", "*", "*"],
+            ["*", "*", "*", "X", "O", "X", "*", "*"],
+            ["*", "*", "*", "*", "X", "X", "X", "*"],
+            ["*", "*", "*", "*", "*", "*", "O", "*"],
+            ["*", "*", "*", "*", "*", "*", "*", "O"],
+        ]
+    )
+    board[board == "O"] = "2"
+    board[board == "X"] = "1"
+    board[board == "*"] = "0"
+    board = board.astype(float)
+    # Can't use "-1" as string, so dumb workaround
+    board[board == 2] = -1
+    assert has_legal_move(board, current_player=1)
+    assert has_legal_move(board, current_player=-1)
+
+
+def test_idx_surrounding() -> None:
+
+    board = np.array(
+        [
+            ["O", "X", "*", "*", "*", "*", "*", "*"],
+            ["X", "X", "X", "*", "*", "*", "*", "*"],
+            ["*", "X", "O", "X", "*", "*", "*", "*"],
+            ["*", "*", "X", "O", "X", "*", "*", "*"],
+            ["*", "*", "*", "X", "O", "X", "*", "*"],
+            ["*", "*", "*", "*", "X", "X", "X", "*"],
+            ["*", "*", "*", "*", "*", "*", "O", "*"],
+            ["*", "*", "*", "*", "*", "*", "*", "O"],
+        ]
+    )
+    board[board == "O"] = "2"
+    board[board == "X"] = "1"
+    board[board == "*"] = "0"
+    board = board.astype(float)
+    # Can't use "-1" as string, so dumb workaround
+    board[board == 2] = -1
+    idxs = idx_surrounding(board, (6, 6))
+    assert (7, 6) in idxs
