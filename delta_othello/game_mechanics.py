@@ -18,7 +18,7 @@ def load_network(team_name: str, network_folder: Path = HERE) -> nn.Module:
     assert (
         net_path.exists()
     ), f"Network saved using TEAM_NAME='{team_name}' doesn't exist! ({net_path})"
-    model = torch.load(net_path)
+    model = torch.load(net_path, map_location=torch.device("cpu"))
     model.eval()
     return model
 
