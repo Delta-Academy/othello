@@ -44,7 +44,11 @@ You can play with your teammate here: https://www.eothello.com/.
 
 ## Tournament Format :crossed_swords:
 
-We follow the **Othello World Championship Rules**. Each 1-v-1 matchup consists of up to 3 games. The first player to play the first game is chosen randomly. The other player starts the second game. The starter of the third game, if one is necessary, is the player who, in total over games 1 & 2, had the most discs at the end of the games. If this is a tie, the draw is made randomly.
+## Competition Format :crossed_swords:
+
+The competition is a knockout tournament where your AI will play other teams' AIs 1-v-1.
+
+We follow the Othello World Championship Rules. Each 1-v-1 matchup consists of up to 3 games. The **first player to play** the first game is chosen randomly. The other player starts the second game. The starter of the third game, if one is necessary, is the player who, in total over games 1 & 2, had the most discs. If this is a tie, the draw is made randomly.
 
 The winner of the matchup is the winner of more of the 3 games. If this is tied, the total number of discs at the end of the games shall be used to determine the winner. If this is a tie, then both teams progress to the next round with one of the teams as their representative.
 
@@ -72,7 +76,9 @@ Since there are `10 ** 28` possible states, we suggest you use a neural network 
 
 **The index (0 -> 5) of the column and the index (0 -> 5) of the row to drop your counter into - as a Tuple (row, column).**
 
-In Othello, sometimes you will have no valid move to take but the game is not finished. In this case, you should return `None`.
+In Othello, sometimes you will have no valid move to take but the game is not finished. In this case, you must `return None`.
+
+If a legal move is available you must play it. So only `return None` when no legal move is available.
 
 If a legal move is available you must play it. So only return `None` when no legal move is available.
 
@@ -113,7 +119,8 @@ See example usage in <code style="white-space:nowrap;">play_othello_game()</code
 The opponent's <code style="white-space:nowrap;">choose_move</code> function is input at initialisation (when <code style="white-space:nowrap;">Env(opponent_choose_move)</code> is called). The first player is chosen at random when <code style="white-space:nowrap;">Env.reset()</code> is called. Every time you call <code style="white-space:nowrap;">Env.step()</code>, 2 moves are taken - yours and then your opponent's. Your opponent sees a 'flipped' version of the board, where his pieces are shown as <code style="white-space:nowrap;">1</code>'s and yours are shown as <code style="white-space:nowrap;">-1</code>'s.
     <br />
     <br />
-    Both <code style="white-space:nowrap;">  Env.step()</code> and <code style="white-space:nowrap;">  Env.reset()</code> have <code style="white-space:nowrap;">  verbose</code> arguments which print debugging info to console when set to <code style="white-space:nowrap;">True</code>. Verbose visualises the ongoing progress of the game in the console. Player1's tiles (you) are represented as an X. Your opponents tiles are represented as O.
+   The Env also has a <code style="white-space:nowrap;">render</code> argument which will render the game graphically if true.  Player1's tiles (you) are black. Your opponents tiles are represented as white. Legal moves are shown with grey circles. The Env also has a <code style="white-space:nowrap;">verbose</code> argument which will print debugging info and the board to the console if true. Player1's tiles (you) are represented as an X. Your opponents tiles are represented as O.
+
 </details>
 
 <details>
@@ -131,13 +138,75 @@ Plays 1 game of Othello, which can be visualsed in the console (if <code style="
 <br />
 Inputs:
 
-<code style="white-space:nowrap;">your_choose_move</code>: Function that takes the state and outputs the action for your agent.
+<code style="white-space:nowrap;">your_choose_move</code>: Function that takes the state and outputs the action for your agent. Set this to human_player to play against your bot! This player plays as black. Legal moves are shown in grey.
 
-<code style="white-space:nowrap;">opponent_choose_move</code>: Function that takes the state and outputs the action for the opponent.
+<code style="white-space:nowrap;">opponent_choose_move</code>: Function that takes the state and outputs the action for the opponent. This player plays as white
 
 <code style="white-space:nowrap;">game_speed_multiplier</code>: controls the gameplay speed. High numbers mean fast games, low numbers mean slow games.
 
 <code style="white-space:nowrap;">verbose</code>: whether to print to console each move and the corresponding board states.
+
+<code style="white-space:nowrap;">render</code>: whether to render the game after each move. You will need this to be True to play against your bot.
+
+</details>
+
+<details>
+<summary><code style="white-space:nowrap;">  human_player()</code></summary>
+See if you can beat your bot!
+
+<br />
+<br />
+
+Left click on the board to take a move. Legal moves are shown with grey circles.
+<br />
+<br />
+
+</details>
+
+## Suggested Approach :+1:
+
+1. Discuss your neural network architecture - how many inputs, outputs, hidden layers & which activation functions should you use. [Read this as a starting point for what architecture to use.](https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw#:~:text=The%20number%20of%20hidden%20neurons,size%20of%20the%20input%20layer)
+2. **Write `train()`** (you can borrow code from past exercises).
+3. Insert debugging messages - you want to make sure that:
+   - Loss is decreasing :chart_with_downwards_trend:
+   - The magnitude of update steps are decreasing :arrow_down:
+   - Performance on Othello is improving :arrow_up:
+4. Iterate on the neural network architecture, hyperparameters & training algorithm
+
+<<<<<<< HEAD
+
+# <code style="white-space:nowrap;">your_choose_move</code>: Function that takes the state and outputs the action for your agent.
+
+> > > > > > > 1787052 (update README)
+
+<code style="white-space:nowrap;">your_choose_move</code>: Function that takes the state and outputs the action for your agent. Set this to human_player to play against your bot! This player plays as black. Legal moves are shown in grey.
+
+<code style="white-space:nowrap;">opponent_choose_move</code>: Function that takes the state and outputs the action for the opponent. This player plays as white
+
+<<<<<<< HEAD
+<code style="white-space:nowrap;">verbose</code>: whether to print to console each move and the corresponding board states.
+
+=======
+<code style="white-space:nowrap;">game_speed_multiplier</code>: controls the gameplay speed. High numbers mean fast games, low numbers mean slow games.
+
+<code style="white-space:nowrap;">verbose</code>: whether to print to console each move and the corresponding board states.
+
+<code style="white-space:nowrap;">render</code>: whether to render the game after each move. You will need this to be True to play against your bot.
+
+</details>
+
+<details>
+<summary><code style="white-space:nowrap;">  human_player()</code></summary>
+See if you can beat your bot!
+
+<br />
+<br />
+
+Left click on the board to take a move. Legal moves are shown with grey circles.
+<br />
+<br />
+
+> > > > > > > 1787052 (update README)
 
 </details>
 
