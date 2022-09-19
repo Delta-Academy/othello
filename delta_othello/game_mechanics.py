@@ -22,7 +22,15 @@ HERE = Path(__file__).parent.resolve()
 def reward_function(board: np.ndarray) -> int:
     """The reward player 1 will recieve for a given board."""
     if is_terminal(board):
-        return 1 if np.sum(board == 1) > np.sum(board == -1) else -1
+        n_pieces_player = np.sum(board == 1)
+        n_pieces_opponent = np.sum(board == -1)
+        return (
+            1
+            if n_pieces_player > n_pieces_opponent
+            else -1
+            if n_pieces_opponent < n_pieces_player
+            else 0
+        )
     return 0
 
 
