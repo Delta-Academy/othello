@@ -42,8 +42,6 @@ You can play with your teammate here: https://www.eothello.com/.
    - You can update your code after submitting, but **not after the deadline**.
    - Check your submission is valid with `check_submission()`
 
-## Tournament Format :crossed_swords:
-
 ## Competition Format :crossed_swords:
 
 The competition is a knockout tournament where your AI will play other teams' AIs 1-v-1.
@@ -77,8 +75,6 @@ Since there are `10 ** 28` possible states, we suggest you use a neural network 
 **The index (0 -> 5) of the column and the index (0 -> 5) of the row to drop your counter into - as a Tuple (row, column).**
 
 In Othello, sometimes you will have no valid move to take but the game is not finished. In this case, you must `return None`.
-
-If a legal move is available you must play it. So only `return None` when no legal move is available.
 
 If a legal move is available you must play it. So only return `None` when no legal move is available.
 
