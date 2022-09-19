@@ -1,5 +1,5 @@
 import copy
-import os
+import itertools
 import random
 from pathlib import Path
 from time import sleep
@@ -56,10 +56,7 @@ def choose_move_randomly(
     board: np.ndarray,
 ) -> Optional[Tuple[int, int]]:
     """Returns a random legal move on the current board (always plays as player 1."""
-    moves = get_legal_moves(board)
-    if moves:
-        return random.choice(moves)
-    return None
+    return random.choice(moves) if (moves := get_legal_moves(board)) else None
 
 
 def play_othello_game(
@@ -82,13 +79,13 @@ def play_othello_game(
     Returns: total_return, which is the sum of return from the game
     """
     total_return = 0
-    game = OthelloEnv(opponent_choose_move)
-    state, reward, done, info = game.reset(verbose)
+    game = OthelloEnv(opponent_choose_move, verbose=verbose, render=render)
+    state, reward, done, _ = game.reset()
     sleep(1 / game_speed_multiplier)
 
     while not done:
         action = your_choose_move(state)
-        state, reward, done, info = game.step(action, verbose)
+        state, reward, done, _ = game.step(action)
         total_return += reward
         sleep(1 / game_speed_multiplier)
 
@@ -183,9 +180,8 @@ def flip_tiles(board: np.ndarray, move: Tuple[int, int], current_player: int) ->
                 col = move[1] + direction[1] * i
                 if board[row][col] == current_player:
                     break
-                else:
-                    board[row][col] = current_player
-                    i += 1
+                board[row][col] = current_player
+                i += 1
     return board
 
 
@@ -198,11 +194,10 @@ def has_legal_move(board: np.ndarray, current_player: int) -> bool:
             to make.
     """
     board_dim = len(board)
-    for row in range(board_dim):
-        for col in range(board_dim):
-            move = (row, col)
-            if is_legal_move(board, move, current_player):
-                return True
+    for row, col in itertools.product(range(board_dim), range(board_dim)):
+        move = (row, col)
+        if is_legal_move(board, move, current_player):
+            return True
     return False
 
 
@@ -211,11 +206,10 @@ def _get_legal_moves(board: np.ndarray, current_player: int) -> List[Tuple[int, 
 
     moves = []
     board_dim = len(board)
-    for row in range(board_dim):
-        for col in range(board_dim):
-            move = (row, col)
-            if is_legal_move(board, move, current_player):
-                moves.append(move)
+    for row, col in itertools.product(range(board_dim), range(board_dim)):
+        move = (row, col)
+        if is_legal_move(board, move, current_player):
+            moves.append(move)
     return moves
 
 
@@ -224,7 +218,7 @@ def get_empty_board(board_dim: int = 6, player_start: int = 1) -> np.ndarray:
     if board_dim < 2:
         return board
     coord1 = int(board_dim / 2 - 1)
-    coord2 = int(board_dim / 2)
+    coord2 = board_dim // 2
     initial_squares = [
         (coord1, coord2),
         (coord1, coord1),
@@ -257,27 +251,31 @@ class OthelloEnv:
     YELLOW_COLOR = (255, 240, 0)
     RED_COLOR = (255, 0, 0)
 
+    BOARD_DIM = 6
+
     def __init__(
         self,
         opponent_choose_move: Callable[
             [np.ndarray], Optional[Tuple[int, int]]
         ] = choose_move_randomly,
-        board_dim: int = 6,
+        verbose: bool = False,
+        render: bool = False,
     ):
         self._board_visualizer = np.vectorize(lambda x: "X" if x == 1 else "O" if x == -1 else "*")
         self._opponent_choose_move = opponent_choose_move
         self._screen = None
-        self.board_dim = board_dim
+        self.verbose = verbose
+        self.render = render
         self.reset()
 
-    def reset(self, verbose: bool = False) -> Tuple[np.ndarray, int, bool, Dict]:
+    def reset(self) -> Tuple[np.ndarray, int, bool, Dict]:
         """Resets game & takes 1st opponent move if they are chosen to go first."""
         self._player = random.choice([-1, 1])
-        self._board = get_empty_board(self.board_dim, self._player)
-        self.running_tile_count = 4 if self.board_dim > 2 else 0
+        self._board = get_empty_board(self.BOARD_DIM, self._player)
+        self.running_tile_count = 4 if self.BOARD_DIM > 2 else 0
         self.done = False
         self.winner = None
-        if verbose:
+        if self.verbose:
             print(f"Starting game. Player {self._player} has first move\n", self)
 
         reward = 0
@@ -285,7 +283,7 @@ class OthelloEnv:
         if self._player == -1:
             # Negative sign is because both players should see themselves as player 1
             opponent_action = self._opponent_choose_move(-self._board)
-            reward = -self._step(opponent_action, verbose)  # Can be None, fix
+            reward = -self._step(opponent_action)  # Can be None, fix
 
         return self._board, reward, self.done, self.info
 
@@ -302,9 +300,9 @@ class OthelloEnv:
 
     def switch_player(self) -> None:
         """Change self.player only when game isn't over."""
-        self._player *= -1 if not self.done else 1
+        self._player *= 1 if self.done else -1
 
-    def _step(self, move: Optional[Tuple[int, int]], verbose: bool = False) -> int:
+    def _step(self, move: Optional[Tuple[int, int]]) -> int:
         """Takes 1 turn, internal to this class.
 
         Do not call
@@ -314,8 +312,9 @@ class OthelloEnv:
         if move is None:
             assert not has_legal_move(
                 self._board, self._player
-            ), f"Your move is None, but you must make a move when a legal move is available!"
-            if verbose:
+            ), "Your move is None, but you must make a move when a legal move is available!"
+
+            if self.verbose:
                 print(f"Player {self._player} has no legal move, switching player")
             self.switch_player()
             return 0
@@ -336,34 +335,29 @@ class OthelloEnv:
         )
         won = self.done and tile_difference > 0
 
-        # Currently just if won, many alternatives
-        reward = 1 if won else 0
-
-        if verbose:
+        if self.verbose:
             print(f"Player {self._player} places counter at row {move[0]}, column {move[1]}")
             print(self)
             if self.done:
                 if won:
                     print(f"Player {self._player} has won!\n")
-                elif self.running_tile_count == self.board_dim**2 and tile_difference == 0:
+                elif self.running_tile_count == self.BOARD_DIM**2 and tile_difference == 0:
                     print("Board full. It's a tie!")
                 else:
                     print(f"Player {self._player * -1} has won!\n")
 
         self.switch_player()
-        return reward
+        return 1 if won else 0
 
-    def step(
-        self, move: Optional[Tuple[int, int]], verbose: bool = False
-    ) -> Tuple[np.ndarray, int, bool, Dict[str, int]]:
+    def step(self, move: Optional[Tuple[int, int]]) -> Tuple[np.ndarray, int, bool, Dict[str, int]]:
         """Called by user - takes 2 turns, yours and your opponent's"""
 
-        reward = self._step(move, verbose)
+        reward = self._step(move)
 
         if not self.done:
             # Negative sign is because both players should see themselves as player 1
             opponent_action = self._opponent_choose_move(-self._board)
-            opponent_reward = self._step(opponent_action, verbose)  # Can be None, fix
+            opponent_reward = self._step(opponent_action)
             # Negative sign is because the opponent's victory is your loss
             reward -= opponent_reward
 
@@ -384,5 +378,5 @@ class OthelloEnv:
         return (
             not has_legal_move(self._board, self._player)
             and not has_legal_move(self._board, self._player * -1)
-            or self.running_tile_count == self.board_dim**2
+            or self.running_tile_count == self.BOARD_DIM**2
         )
