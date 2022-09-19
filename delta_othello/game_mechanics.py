@@ -16,34 +16,29 @@ import torch.nn as nn
 HERE = Path(__file__).parent.resolve()
 
 
-def load_network(team_name: str, network_folder: Path = HERE) -> nn.Module:
-    net_path = network_folder / f"{team_name}_network.pt"
-    assert (
-        net_path.exists()
-    ), f"Network saved using TEAM_NAME='{team_name}' doesn't exist! ({net_path})"
-    model = torch.load(net_path, map_location=torch.device("cpu"))
-    model.eval()
-    return model
-
-
-def save_network(network: nn.Module, team_name: str) -> None:
-    assert isinstance(
-        network, nn.Module
-    ), f"train() function outputs an network type: {type(network)}"
-    assert "/" not in team_name, "Invalid TEAM_NAME. '/' are illegal in TEAM_NAME"
-    net_path = HERE / f"{team_name}_network.pt"
-    n_retries = 5
-    for attempt in range(n_retries):
-        try:
-            torch.save(network, net_path)
-            load_network(team_name)
-            return
-        except Exception:
-            if attempt == n_retries - 1:
-                raise
-
-
 ########## POTENTIALLY USEFUL FEATURES ############################
+
+
+def reward_function(board: np.ndarray) -> int:
+    """The reward player 1 will recieve for a given board."""
+    if is_terminal(board):
+        n_pieces_player = np.sum(board == 1)
+        n_pieces_opponent = np.sum(board == -1)
+        return (
+            1
+            if n_pieces_player > n_pieces_opponent
+            else -1
+            if n_pieces_opponent < n_pieces_player
+            else 0
+        )
+    return 0
+
+
+def is_terminal(board: np.ndarray) -> bool:
+    """Can no more moves be played on the board?"""
+    return np.sum(board != 0) == OthelloEnv.BOARD_DIM**2 or (
+        not has_legal_move(board, 1) and not has_legal_move(board, -1)
+    )
 
 
 def get_legal_moves(board: np.ndarray) -> List[Tuple[int, int]]:
@@ -471,12 +466,38 @@ def pos_to_coord(pos: Tuple[int, int]) -> Tuple[int, int]:
     return row, col
 
 
-def human_player(*args, **kwargs) -> Tuple[int, int]:
+def human_player(*args: Any, **kwargs: Any) -> Tuple[int, int]:
     print("Your move, click to place a tile!")
-
     while True:
         ev = pygame.event.get()
         for event in ev:
             if event.type == pygame.MOUSEBUTTONUP:
                 pos = pygame.mouse.get_pos()
                 return pos_to_coord(pos)
+
+
+def load_network(team_name: str, network_folder: Path = HERE) -> nn.Module:
+    net_path = network_folder / f"{team_name}_network.pt"
+    assert (
+        net_path.exists()
+    ), f"Network saved using TEAM_NAME='{team_name}' doesn't exist! ({net_path})"
+    model = torch.load(net_path, map_location=torch.device("cpu"))
+    model.eval()
+    return model
+
+
+def save_network(network: nn.Module, team_name: str) -> None:
+    assert isinstance(
+        network, nn.Module
+    ), f"train() function outputs an network type: {type(network)}"
+    assert "/" not in team_name, "Invalid TEAM_NAME. '/' are illegal in TEAM_NAME"
+    net_path = HERE / f"{team_name}_network.pt"
+    n_retries = 5
+    for attempt in range(n_retries):
+        try:
+            torch.save(network, net_path)
+            load_network(team_name)
+            return
+        except Exception:
+            if attempt == n_retries - 1:
+                raise
