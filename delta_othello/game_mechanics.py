@@ -95,31 +95,6 @@ def play_othello_game(
     return total_return
 
 
-def load_network(team_name: str) -> nn.Module:
-    net_path = os.path.join(HERE, f"{team_name}_network.pt")
-    assert os.path.exists(
-        net_path
-    ), f"Network saved using TEAM_NAME='{team_name}' doesn't exist! ({net_path})"
-    model = torch.load(net_path)
-    model.eval()
-    return model
-
-
-def save_network(network: nn.Module, team_name: str) -> None:
-    assert isinstance(network, nn.Module), f"train() function outputs an invalid network: {network}"
-    assert "/" not in team_name, "Invalid TEAM_NAME. '/' are illegal in TEAM_NAME"
-    n_retries = 5
-    net_path = os.path.join(HERE, f"{team_name}_network.pt")
-    for attempt in range(n_retries):
-        try:
-            torch.save(network, net_path)
-            load_network(team_name)
-            return
-        except Exception as e:
-            if attempt == n_retries - 1:
-                raise
-
-
 ####### THESE FUNCTIONS ARE LESS USEFUL ############
 
 
