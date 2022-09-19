@@ -74,7 +74,7 @@ Since there are `10 ** 28` possible states, we suggest you use a neural network 
 
 **The index (0 -> 5) of the column and the index (0 -> 5) of the row to drop your counter into - as a Tuple (row, column).**
 
-In Othello, sometimes you will have no valid move to take but the game is not finished. In this case, you must `return None`.
+In Othello, sometimes you will have no valid move to take but the game is not finished. In this case, you must return `None`.
 
 If a legal move is available you must play it. So only return `None` when no legal move is available.
 
