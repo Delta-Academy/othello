@@ -258,7 +258,6 @@ class OthelloEnv:
         pygame.init()
         self.screen = pygame.display.set_mode((N_ROWS * SQUARE_SIZE, N_COLS * SQUARE_SIZE))
         pygame.display.set_caption("Othello")
-        self.clock = pygame.time.Clock()
         self.screen.fill(WHITE_COLOR)
 
     def reset(self) -> Tuple[np.ndarray, int, bool, Dict]:
