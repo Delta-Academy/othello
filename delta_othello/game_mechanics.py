@@ -1,12 +1,11 @@
 import copy
+import os
 import random
-import time
 from pathlib import Path
+from time import sleep
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
-
-import numba as nb
 import torch
 import torch.nn as nn
 
@@ -54,13 +53,71 @@ def make_move(board: np.ndarray, move: Tuple[int, int]) -> np.ndarray:
 
 
 def choose_move_randomly(
-    state: np.ndarray,
+    board: np.ndarray,
 ) -> Optional[Tuple[int, int]]:
-    """Returns a random legal move on the current board (always plays as player 1)."""
-    moves = get_legal_moves(state)
+    """Returns a random legal move on the current board (always plays as player 1."""
+    moves = get_legal_moves(board)
     if moves:
         return random.choice(moves)
     return None
+
+
+def play_othello_game(
+    your_choose_move: Callable[[np.ndarray], Optional[Tuple[int, int]]],
+    opponent_choose_move: Callable[[np.ndarray], Optional[Tuple[int, int]]],
+    game_speed_multiplier: float = 1,
+    render: bool = False,
+    verbose: bool = False,
+) -> int:
+    """Play a game where moves are chosen by `your_choose_move()` and `opponent_choose_move()`. Who
+    goes first is chosen at random. You can render the game by setting `render=True`.
+
+    Args:
+        your_choose_move: function that chooses move (takes state as input)
+        opponent_choose_move: function that picks your opponent's next move
+        game_speed_multiplier: multiplies the speed of the game. High == fast
+        render: whether to render the game using pygame or not
+        verbose: whether to print board states to console. Useful for debugging
+
+    Returns: total_return, which is the sum of return from the game
+    """
+    total_return = 0
+    game = OthelloEnv(opponent_choose_move)
+    state, reward, done, info = game.reset(verbose)
+    sleep(1 / game_speed_multiplier)
+
+    while not done:
+        action = your_choose_move(state)
+        state, reward, done, info = game.step(action, verbose)
+        total_return += reward
+        sleep(1 / game_speed_multiplier)
+
+    return total_return
+
+
+def load_network(team_name: str) -> nn.Module:
+    net_path = os.path.join(HERE, f"{team_name}_network.pt")
+    assert os.path.exists(
+        net_path
+    ), f"Network saved using TEAM_NAME='{team_name}' doesn't exist! ({net_path})"
+    model = torch.load(net_path)
+    model.eval()
+    return model
+
+
+def save_network(network: nn.Module, team_name: str) -> None:
+    assert isinstance(network, nn.Module), f"train() function outputs an invalid network: {network}"
+    assert "/" not in team_name, "Invalid TEAM_NAME. '/' are illegal in TEAM_NAME"
+    n_retries = 5
+    net_path = os.path.join(HERE, f"{team_name}_network.pt")
+    for attempt in range(n_retries):
+        try:
+            torch.save(network, net_path)
+            load_network(team_name)
+            return
+        except Exception as e:
+            if attempt == n_retries - 1:
+                raise
 
 
 ####### THESE FUNCTIONS ARE LESS USEFUL ############
@@ -78,122 +135,48 @@ def _make_move(board: np.ndarray, move: Tuple[int, int], current_player: int) ->
 
 
 def is_legal_move(board: np.ndarray, move: Tuple[int, int], current_player: int) -> bool:
+    """Method: is_legal_move
+    Parameters: self, move (tuple)
+    Returns: boolean (True if move is legal, False otherwise)
+    Does: Checks whether the player's move is legal.
+    """
     board_dim = board.shape[0]
     if is_valid_coord(board_dim, move[0], move[1]) and board[move] == 0:
-        if has_tile_to_flip(board, move, current_player):
-            return True
+        for direction in MOVE_DIRS:
+            if has_tile_to_flip(board, move, direction, current_player):
+                return True
     return False
-
-
-def idx_surrounding(arr: np.ndarray, idx: Tuple[int, int]) -> List[Tuple[int, int]]:
-    """Returns the indexes of the elements within a radius of 1 of the original element (arr must be
-    2d and square currently)"""
-    assert arr.shape[0] == arr.shape[1]
-    dim = arr.shape[0]
-    to_check = [
-        (idx[0] - 1, idx[1] - 1),
-        (idx[0] + 0, idx[1] - 1),
-        (idx[0] + 1, idx[1] - 1),
-        (idx[0] - 1, idx[1] - 0),
-        (idx[0] + 0, idx[1] - 0),
-        (idx[0] + 1, idx[1] - 0),
-        (idx[0] - 1, idx[1] + 1),
-        (idx[0] + 0, idx[1] + 1),
-        (idx[0] + 1, idx[1] + 1),
-    ]
-    return [coord for coord in to_check if 0 <= coord[0] < dim and 0 <= coord[1] < dim]
 
 
 def is_valid_coord(board_dim: int, row: int, col: int) -> bool:
+    """Method: is_valid_coord
+    Parameters: self, row (integer), col (integer)
+    Returns: boolean (True if row and col is valid, False otherwise)
+    Does: Checks whether the given coordinate (row, col) is valid.
+            A valid coordinate must be in the range of the board.
+    """
     return 0 <= row < board_dim and 0 <= col < board_dim
-
-
-def get_vectors(
-    arr: np.ndarray, move: Tuple[int, int]
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Get all 4 vectors in arr that pass through coordinate move."""
-    dim = arr.shape[0]
-    vertical = arr[np.arange(dim), move[1]]
-    horizontal = arr[move[0], np.arange(dim)]
-
-    # Top left to bottom right diagonal
-    east = dim - max(move)
-    west = min(move)
-    row = np.arange(move[0] - west, move[0] + east)
-    col = np.arange(move[1] - west, move[1] + east)
-    diag1 = arr[row, col]
-
-    # Bottom left to top right diagonal
-    west = min(dim - 1 - move[0], move[1])
-    east = min(move[0], dim - 1 - move[1])
-    row = np.flip(np.arange(move[0] - east, move[0] + west + 1))
-    col = np.arange(move[1] - west, move[1] + east + 1)
-    diag2 = arr[row, col]
-
-    return vertical, horizontal, diag1, diag2
-
-
-@nb.jit(parallel=True)
-def is_sub_arr(a1: np.ndarray, a2: np.ndarray) -> bool:
-    """is a2 a subarray of a1?"""
-    for i in nb.prange(len(a1) - len(a2) + 1):
-        for j in range(len(a2)):
-            if a1[i + j] != a2[j]:
-                break
-        else:
-            return True
-    return False
-
-
-# Current only works for dim<=8 and not optimised for smaller
-MATCHES = [
-    np.array([2, -1, 1], dtype=float),
-    np.array([2, -1, -1, 1], dtype=float),
-    np.array([2, -1, -1, -1, 1], dtype=float),
-    np.array([2, -1, -1, -1, -1, 1], dtype=float),
-    np.array([2, -1, -1, -1, -1, -1, 1], dtype=float),
-    np.array([2, -1, -1, -1, -1, -1, -1, 1], dtype=float),
-    np.array([1, -1, 2], dtype=float),
-    np.array([1, -1, -1, 2], dtype=float),
-    np.array([1, -1, -1, -1, 2], dtype=float),
-    np.array([1, -1, -1, -1, -1, 2], dtype=float),
-    np.array([1, -1, -1, -1, -1, -1, 2], dtype=float),
-    np.array([1, -1, -1, -1, -1, -1, -1, 2], dtype=float),
-]
-
-
-def has_flip(line: np.ndarray) -> bool:
-    for match in MATCHES:
-        if is_sub_arr(line, match):
-            return True
-    return False
 
 
 def has_tile_to_flip(
     board: np.ndarray,
     move: Tuple[int, int],
-    current_player: int,
-) -> bool:
-    """Checks if there is a tile to flip in any direction following move."""
-    board_check = board.copy()
-    # Mark the potential move as a 2, to distinguish from existing counters
-    board_check[move] = 2 * current_player
-    for vector in get_vectors(board_check * current_player, move):
-        if has_flip(vector):
-            return True
-    return False
-
-
-def has_tile_to_flip_direction(
-    board: np.ndarray,
-    move: Tuple[int, int],
     direction: Tuple[int, int],
     current_player: int,
 ) -> bool:
-    """Following move, check if there is a tile to flip in a given direction.
+    """Method: has_tile_to_flip
+    Parameters: self, move (tuple), direction (tuple)
+    Returns: boolean
+                (True if there is any tile to flip, False otherwise)
+    Does: Checks whether the player has any adversary's tile to flip
+            with the move they make.
 
-    n.b. This is not optimised but is called rarely so not 100% necessary
+            About input: move is the (row, col) coordinate of where the
+            player makes a move; direction is the direction in which the
+            adversary's tile is to be flipped (direction is any tuple
+            defined in MOVE_DIRS) -> None.
     """
+
     board_dim = board.shape[0]
     i = 1
     while True:
@@ -214,11 +197,11 @@ def flip_tiles(board: np.ndarray, move: Tuple[int, int], current_player: int) ->
     player.
 
     Arg:
-        move: The move just made to
-               trigger the flips
+        move (Tuple[int, int]): The move just made to
+                                trigger the flips
     """
     for direction in MOVE_DIRS:
-        if has_tile_to_flip_direction(board, move, direction, current_player):
+        if has_tile_to_flip(board, move, direction, current_player):
             i = 1
             while True:
                 row = move[0] + direction[0] * i
@@ -231,39 +214,37 @@ def flip_tiles(board: np.ndarray, move: Tuple[int, int], current_player: int) ->
     return board
 
 
-def get_possible_moves(board: np.ndarray) -> set:
-
-    board_dim = len(board)
-    zero_idx = board == 0
-    # Few empty, iterate through these (1.5 threshold chosen empirically for speed)
-    if np.sum(zero_idx) < board_dim**2 / 1.5:
-        idx_check = np.where(zero_idx)
-        to_check = set(zip(idx_check[0], idx_check[1]))
-    to_check = set()
-    idx_pieces = np.where(~zero_idx)
-    for pos in zip(idx_pieces[0], idx_pieces[1]):
-        idxs = idx_surrounding(board, pos)
-        # to_check.update(list(zip(idxs[0], idxs[1])))
-        to_check.update(idxs)
-
-    return to_check
-
-
 def has_legal_move(board: np.ndarray, current_player: int) -> bool:
-    """Checks whether current_player has any legal move to make."""
-    possible_moves = get_possible_moves(board)
-    for move in possible_moves:
-        if is_legal_move(board, move, current_player):
-            return True
+    """Method: has_legal_move
+    Parameters: self
+    Returns: boolean
+                (True if the player has legal move, False otherwise)
+    Does: Checks whether the current player has any legal move
+            to make.
+    """
+    board_dim = len(board)
+    for row in range(board_dim):
+        for col in range(board_dim):
+            move = (row, col)
+            if is_legal_move(board, move, current_player):
+                return True
     return False
 
 
 def _get_legal_moves(board: np.ndarray, current_player: int) -> List[Tuple[int, int]]:
-    possible_moves = get_possible_moves(board)
-    return [move for move in possible_moves if is_legal_move(board, move, current_player)]
+    """Return a list of legal moves that can be made by player 1 on the current board."""
+
+    moves = []
+    board_dim = len(board)
+    for row in range(board_dim):
+        for col in range(board_dim):
+            move = (row, col)
+            if is_legal_move(board, move, current_player):
+                moves.append(move)
+    return moves
 
 
-def get_empty_board(board_dim: int = 8, player_start: int = 1) -> np.ndarray:
+def get_empty_board(board_dim: int = 6, player_start: int = 1) -> np.ndarray:
     board = np.zeros((board_dim, board_dim))
     if board_dim < 2:
         return board
@@ -282,7 +263,7 @@ def get_empty_board(board_dim: int = 8, player_start: int = 1) -> np.ndarray:
         player = player_start if i % 2 == 0 else player_start * -1
         board[row, col] = player
 
-    return board.copy()
+    return board
 
 
 # Directions relative to current counter (0, 0) that a tile to flip can be
@@ -306,7 +287,7 @@ class OthelloEnv:
         opponent_choose_move: Callable[
             [np.ndarray], Optional[Tuple[int, int]]
         ] = choose_move_randomly,
-        board_dim: int = 8,
+        board_dim: int = 6,
     ):
         self._board_visualizer = np.vectorize(lambda x: "X" if x == 1 else "O" if x == -1 else "*")
         self._opponent_choose_move = opponent_choose_move
@@ -425,44 +406,8 @@ class OthelloEnv:
 
     @property
     def game_over(self) -> bool:
-        if self.running_tile_count == self.board_dim**2:
-            return True
-        elif has_legal_move(self._board, self._player):
-            return False
-        elif has_legal_move(self._board, self._player * -1):
-            return False
-        return True
-
-
-def play_othello_game(
-    your_choose_move: Callable[[np.ndarray], Optional[Tuple[int, int]]],
-    opponent_choose_move: Callable[[np.ndarray], Optional[Tuple[int, int]]],
-    game_speed_multiplier: float = 1,
-    verbose: bool = False,
-) -> int:
-    """Play a game where moves are chosen by `your_choose_move()` and `opponent_choose_move()`. Who
-    goes first is chosen at random. You can render the game by setting `render=True`.
-
-    Args:
-        your_choose_move: function that chooses move (takes state as input)
-        opponent_choose_move: function that picks your opponent's next move
-        verbose: whether to print board states to console. Useful for debugging
-        game_speed_multiplier: multiplies the speed of the game. High == fast
-                               (only has an effect when verbose=True)
-
-    Returns: total_return, which is the sum of return from the game
-    """
-    total_return = 0
-    game = OthelloEnv(opponent_choose_move)
-    state, reward, done, info = game.reset(verbose)
-    if verbose:
-        time.sleep(1 / game_speed_multiplier)
-
-    while not done:
-        action = your_choose_move(state)
-        state, reward, done, info = game.step(action, verbose)
-        total_return += reward
-        if verbose:
-            time.sleep(1 / game_speed_multiplier)
-
-    return total_return
+        return (
+            not has_legal_move(self._board, self._player)
+            and not has_legal_move(self._board, self._player * -1)
+            or self.running_tile_count == self.board_dim**2
+        )
