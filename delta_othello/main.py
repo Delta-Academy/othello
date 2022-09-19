@@ -7,6 +7,7 @@ from check_submission import check_submission
 from game_mechanics import (
     OthelloEnv,
     choose_move_randomly,
+    human_player,
     load_network,
     play_othello_game,
     save_network,
@@ -64,8 +65,9 @@ if __name__ == "__main__":
 
     choose_move_no_network = choose_move_randomly
     play_othello_game(
-        your_choose_move=choose_move_no_network,
-        opponent_choose_move=choose_move_randomly,
+        your_choose_move=human_player,
+        opponent_choose_move=choose_move_no_network,
         game_speed_multiplier=1,
         verbose=True,
+        render=True,
     )
