@@ -467,8 +467,8 @@ def draw_counter(
 
 def pos_to_coord(pos: Tuple[int, int]) -> Tuple[int, int]:
     # Assume square board
-    col = math.floor(pos[0] / SQUARE_SIZE)
-    row = math.floor(pos[1] / SQUARE_SIZE)
+    col = pos[0] // SQUARE_SIZE
+    row = pos[1] // SQUARE_SIZE
     return row, col
 
 
