@@ -1,7 +1,6 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
-import torch
 from torch import nn
 
 from check_submission import check_submission
@@ -19,34 +18,24 @@ assert TEAM_NAME != "Team Name", "Please change your TEAM_NAME!"
 
 def train() -> nn.Module:
     """
-    TODO: Write this function to train your algorithm.
-    Returns:
-        A pytorch network to be used by choose_move. You can architect
-        this however you like but your choose_move function must be able
-        to use it.
+    TODO: Write this function to train your network.
     """
     raise NotImplementedError("You need to implement this function!")
 
 
 def choose_move(
-    state: np.ndarray, neural_network: nn.Module, verbose: bool = False
-) -> Optional[Tuple[int, int]]:
+    state: np.ndarray,
+    neural_network: nn.Module,
+) -> Tuple[int, int]:
     """Called during competitive play.
 
-    It acts greedily given current state of the board and value
-    function dictionary. It returns a single move to play.
+    It acts greedily given current state of the board and
+    your neural_netwok. It returns a single move to play.
     Args:
-        state: State of the board as a np array. Your pieces are
-                1's, the opponent's are -1's and empty are 0's.
-        network: The pytorch network output by train().
-        verbose: Whether to print debugging information to console.
+        state: [6x6] np array defining state of the board
+        neural_network: Your network from train()
     Returns:
-        position (Tuple | None): The position (row, col) want to place
-                        your counter. row and col should be an integer 0 -> 7)
-                        where (0,0) is the top left corner and
-                        (7,7) is the bottom right corner. You should return
-                        None if not legal move is available
-    n.b. The None return is not ideal maybe think about how to improve this.
+        move: (row, col) position to place your piece
     """
     raise NotImplementedError("You need to implement this function!")
 
@@ -54,8 +43,8 @@ def choose_move(
 if __name__ == "__main__":
 
     ## Example workflow, feel free to edit this! ###
-    my_network = train()
-    save_network(my_network, TEAM_NAME)
+    neural_network = train()
+    save_network(neural_network, TEAM_NAME)
 
     check_submission(
         TEAM_NAME
@@ -63,19 +52,18 @@ if __name__ == "__main__":
 
     my_network = load_network(TEAM_NAME)
 
-    # Code below plays a single game of othello against a random
+    # Code below plays a single game against a random
     #  opponent, think about how you might want to adapt this to
     #  test the performance of your algorithm.
-    def choose_move_no_value_fn(state: np.ndarray) -> Optional[Tuple[int, int]]:
-        """The arguments in play_connect_4_game() require functions that only take the state as
-        input.
+    def choose_move_no_network(state: np.ndarray) -> Tuple[int, int]:
+        """The arguments in play_game() require functions that only take the state as input.
 
         This converts choose_move() to that format.
         """
         return choose_move(state, my_network)
 
     play_othello_game(
-        your_choose_move=choose_move_no_value_fn,
+        your_choose_move=choose_move_no_network,
         opponent_choose_move=choose_move_randomly,
         game_speed_multiplier=1,
         verbose=True,

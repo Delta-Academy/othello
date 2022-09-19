@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Optional, Tuple
 
+import delta_utils.check_submission as checker
 from torch import nn
 
-import delta_utils.check_submission as checker
 from game_mechanics import get_empty_board, load_network
 
 
@@ -11,7 +11,7 @@ def check_submission(team_name: str) -> None:
     example_state = get_empty_board()
     expected_choose_move_return_type = tuple
     game_mechanics_expected_hash = (
-        "8ae6b7431b6c5767d8c10ac9bfc4c72059529172a92c3ad4571e36b77d0ead2a"
+        "91f3f4308395f327e3e578d673e931feaaec9bf33ff4ead7b274ce8a2b701640"
     )
     expected_pkl_output_type = nn.Module
 
