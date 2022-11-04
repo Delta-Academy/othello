@@ -2,5 +2,5 @@ numpy
 pygame
 tqdm
 torch
-delta-utils
+delta-utils>=0.0.14
 numba
