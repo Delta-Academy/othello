@@ -1,10 +1,8 @@
 import copy
 import itertools
-import math
 import random
 import time
 from pathlib import Path
-from time import sleep
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -36,7 +34,7 @@ def reward_function(board: np.ndarray) -> int:
 
 def is_terminal(board: np.ndarray) -> bool:
     """Can no more moves be played on the board?"""
-    return np.sum(board != 0) == OthelloEnv.BOARD_DIM**2 or (
+    return np.sum(board != 0) == board.shape[0] ** 2 or (
         not has_legal_move(board, 1) and not has_legal_move(board, -1)
     )
 
@@ -223,15 +221,11 @@ BACKGROUND_COLOR = (0, 158, 47)
 BLACK_COLOR = (6, 9, 16)
 WHITE_COLOR = (255, 255, 255)
 GREY_COLOR = (201, 199, 191)
-N_ROWS = 6
-N_COLS = 6
 SQUARE_SIZE = 100
 DISC_SIZE = int(SQUARE_SIZE * 0.4)
 
 
 class OthelloEnv:
-    BOARD_DIM = 6
-
     def __init__(
         self,
         opponent_choose_move: Callable[
@@ -240,6 +234,7 @@ class OthelloEnv:
         verbose: bool = False,
         render: bool = False,
         game_speed_multiplier: float = 1.0,
+        board_dim: int = 6,
     ):
         self._board_visualizer = np.vectorize(lambda x: "X" if x == 1 else "O" if x == -1 else "*")
         self._opponent_choose_move = opponent_choose_move
@@ -249,17 +244,21 @@ class OthelloEnv:
         if self.render:
             self.init_graphics()
 
+        self.board_dim = board_dim
+
     def init_graphics(self) -> None:
         pygame.init()
-        self.screen = pygame.display.set_mode((N_ROWS * SQUARE_SIZE, N_COLS * SQUARE_SIZE))
+        self.screen = pygame.display.set_mode(
+            self.board_dim * SQUARE_SIZE, self.board_dim * SQUARE_SIZE
+        )
         pygame.display.set_caption("Othello")
         self.screen.fill(WHITE_COLOR)
 
     def reset(self) -> Tuple[np.ndarray, int, bool, Dict]:
         """Resets game & takes 1st opponent move if they are chosen to go first."""
         self._player = random.choice([-1, 1])
-        self._board = get_empty_board(self.BOARD_DIM, self._player)
-        self.running_tile_count = 4 if self.BOARD_DIM > 2 else 0
+        self._board = get_empty_board(self.board_dim, self._player)
+        self.running_tile_count = 4 if self.board_dim > 2 else 0
         self.done = False
         self.winner = None
         if self.verbose:
@@ -308,6 +307,9 @@ class OthelloEnv:
             if self.verbose:
                 print(f"Player {self._player} has no legal move, switching player")
             self.switch_player()
+            if self.render:
+                draw_game(self.screen, self._board, get_legal_moves(self._board * self._player))
+                time.sleep(1 / self.game_speed_multiplier)
             return 0
 
         assert is_legal_move(self._board, move, self._player), f"Move {move} is not valid!"
@@ -332,7 +334,7 @@ class OthelloEnv:
             if self.done:
                 if won:
                     print(f"Player {self._player} has won!\n")
-                elif self.running_tile_count == self.BOARD_DIM**2 and tile_difference == 0:
+                elif self.running_tile_count == self.board_dim**2 and tile_difference == 0:
                     print("Board full. It's a tie!")
                 else:
                     print(f"Player {self._player * -1} has won!\n")
@@ -374,17 +376,17 @@ class OthelloEnv:
         return (
             not has_legal_move(self._board, self._player)
             and not has_legal_move(self._board, self._player * -1)
-            or self.running_tile_count == self.BOARD_DIM**2
+            or self.running_tile_count == self.board_dim**2
         )
 
 
 def draw_game(
-    screen: pygame.surface.Surface,
-    board: np.ndarray,
-    legal_moves: Optional[List[Tuple[int, int]]] = None,
+    screen: pygame.surface.Surface, board: np.ndarray, legal_moves: List[Tuple[int, int]]
 ) -> None:
 
     origin = (0, 0)
+    n_rows = board.shape[0]
+    n_cols = board.shape[1]
 
     # Draw background of the board
     pygame.gfxdraw.box(
@@ -392,8 +394,8 @@ def draw_game(
         pygame.Rect(
             origin[0],
             origin[1],
-            N_COLS * SQUARE_SIZE,
-            N_ROWS * SQUARE_SIZE,
+            board.shape[0] * SQUARE_SIZE,
+            board.shape[1] * SQUARE_SIZE,
         ),
         BACKGROUND_COLOR,
     )
@@ -401,33 +403,28 @@ def draw_game(
     # Draw the lines on the board
     size = SQUARE_SIZE
 
-    for x in range(N_ROWS):
-        for y in range(N_COLS):
-            pygame.gfxdraw.rectangle(
-                screen,
-                (origin[0] + x * size, origin[1] + y * size, size, size),
-                BLACK_COLOR,
-            )
+    for x, y in itertools.product(range(n_rows), range(n_cols)):
+        pygame.gfxdraw.rectangle(
+            screen,
+            (origin[0] + x * size, origin[1] + y * size, size, size),
+            BLACK_COLOR,
+        )
 
     # Draw the in play tiles
-    for r in range(N_ROWS):
-        for c in range(N_COLS):
+    for r, c in itertools.product(range(n_rows), range(n_cols)):
+        space = board[r, c]
 
-            space = board[r, c]
+        color = BLACK_COLOR if space == 1 else WHITE_COLOR if space == -1 else BACKGROUND_COLOR
+        outline_color = BACKGROUND_COLOR if (r, c) not in legal_moves else GREY_COLOR
 
-            color = BLACK_COLOR if space == 1 else WHITE_COLOR if space == -1 else BACKGROUND_COLOR
-            outline_color = (
-                BACKGROUND_COLOR if legal_moves is None or (r, c) not in legal_moves else GREY_COLOR
-            )
-
-            draw_counter(
-                screen,
-                origin[0] + c * SQUARE_SIZE + SQUARE_SIZE // 2,
-                origin[1] + r * SQUARE_SIZE + SQUARE_SIZE // 2,
-                DISC_SIZE,
-                fill_color=color,
-                outline_color=outline_color,
-            )
+        draw_counter(
+            screen,
+            origin[0] + c * SQUARE_SIZE + SQUARE_SIZE // 2,
+            origin[1] + r * SQUARE_SIZE + SQUARE_SIZE // 2,
+            DISC_SIZE,
+            fill_color=color,
+            outline_color=outline_color,
+        )
 
     pygame.display.update()
 
@@ -459,21 +456,30 @@ def draw_counter(
     )
 
 
-def pos_to_coord(pos: Tuple[int, int]) -> Tuple[int, int]:
-    # Assume square board
+def pos_to_coord(pos: Tuple[int, int]) -> Tuple[int, int]:  # Assume square board
     col = pos[0] // SQUARE_SIZE
     row = pos[1] // SQUARE_SIZE
     return row, col
 
 
-def human_player(*args: Any, **kwargs: Any) -> Tuple[int, int]:
+LEFT = 1
+
+
+def human_player(state: np.ndarray, *args: Any, **kwargs: Any) -> Optional[Tuple[int, int]]:
+
     print("Your move, click to place a tile!")
+
+    legal_moves = get_legal_moves(state)
+    if not legal_moves:
+        return None
+
     while True:
         ev = pygame.event.get()
         for event in ev:
-            if event.type == pygame.MOUSEBUTTONUP:
-                pos = pygame.mouse.get_pos()
-                return pos_to_coord(pos)
+            if event.type == pygame.MOUSEBUTTONUP and event.button == LEFT:
+                coord = pos_to_coord(pygame.mouse.get_pos())
+                if coord in legal_moves:
+                    return coord
 
 
 def load_network(team_name: str, network_folder: Path = HERE) -> nn.Module:
