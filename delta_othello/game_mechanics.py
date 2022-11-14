@@ -241,15 +241,14 @@ class OthelloEnv:
         self.verbose = verbose
         self.render = render
         self.game_speed_multiplier = game_speed_multiplier
+        self.board_dim = board_dim
         if self.render:
             self.init_graphics()
-
-        self.board_dim = board_dim
 
     def init_graphics(self) -> None:
         pygame.init()
         self.screen = pygame.display.set_mode(
-            self.board_dim * SQUARE_SIZE, self.board_dim * SQUARE_SIZE
+            (self.board_dim * SQUARE_SIZE, self.board_dim * SQUARE_SIZE)
         )
         pygame.display.set_caption("Othello")
         self.screen.fill(WHITE_COLOR)
