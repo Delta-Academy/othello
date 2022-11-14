@@ -38,7 +38,7 @@ You can play with your teammate here: https://www.eothello.com/.
    - You can only store data to be used in a competition in a dictionary (saved in a `.pt` file by `save_network()`)
    - In the competition, your agent will call the `choose_move()` function in `main.py` to select a move (`choose_move()` may call other functions in `main.py`)
    - Any code **not** in `main.py` **will not be used**.
-2. Submission deadline: **3pm GMT, Sunday**.
+2. Submission deadline: **4pm UTC, Sunday**.
    - You can update your code after submitting, but **not after the deadline**.
    - Check your submission is valid with `check_submission()`
 
@@ -54,7 +54,7 @@ E.g. if a player wins 2 games, they win overall.
 
 If both players win 1, draw 1 and lose 1, then the difference in the number of pieces between the win and the loss decides the matchup (since the draw has an equal number of pieces).
 
-The competition & discussion will be in [Gather Town](https://app.gather.town/app/nJwquzJjD4TLKcTy/Delta%20Academy) at **4pm GMT on Sunday** (60 mins after submission deadline)!
+The competition & discussion will be in [Gather Town](https://app.gather.town/app/nJwquzJjD4TLKcTy/Delta%20Academy) at **5pm UTC on Sunday** (60 mins after submission deadline)!
 
 ![Example knockout tournament tree](./images/tournament_tree.png)
 

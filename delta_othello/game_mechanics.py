@@ -14,11 +14,11 @@ import torch.nn as nn
 HERE = Path(__file__).parent.resolve()
 
 
-########## POTENTIALLY USEFUL FEATURES ############################
+##################### POTENTIALLY USEFUL FUNCTIONS ############################
 
 
 def reward_function(board: np.ndarray) -> int:
-    """The reward player 1 will recieve for a given board."""
+    """What reward will the player with the '1' pieces recieve for the current board?"""
     if is_terminal(board):
         n_pieces_player = np.sum(board == 1)
         n_pieces_opponent = np.sum(board == -1)
@@ -52,7 +52,12 @@ def make_move(board: np.ndarray, move: Tuple[int, int]) -> np.ndarray:
 def choose_move_randomly(
     board: np.ndarray,
 ) -> Optional[Tuple[int, int]]:
-    """Returns a random legal move on the current board (always plays as player 1."""
+    """Returns a random legal move on the current board. Returns None if no legal moves are
+    available.
+
+    N.b. Expects board to be in the format where the next turn is taken by the player with the '1'
+    pieces.      The env will always call a choose_move function with the board in this format
+    """
     return random.choice(moves) if (moves := get_legal_moves(board)) else None
 
 
@@ -116,9 +121,7 @@ def is_legal_move(board: np.ndarray, move: Tuple[int, int], current_player: int)
 
 
 def is_valid_coord(board_dim: int, row: int, col: int) -> bool:
-
     """Is the coord (row, col) in the board."""
-
     return 0 <= row < board_dim and 0 <= col < board_dim
 
 
