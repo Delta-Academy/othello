@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+
 import pygame
 import pygame.gfxdraw
 import torch
@@ -50,7 +51,7 @@ def make_move(board: np.ndarray, move: Tuple[int, int]) -> np.ndarray:
 
 
 def choose_move_randomly(
-    board: np.ndarray,
+    state: np.ndarray,
 ) -> Optional[Tuple[int, int]]:
     """Returns a random legal move on the current board. Returns None if no legal moves are
     available.
@@ -58,7 +59,7 @@ def choose_move_randomly(
     N.b. Expects board to be in the format where the next turn is taken by the player with the '1'
     pieces.      The env will always call a choose_move function with the board in this format
     """
-    return random.choice(moves) if (moves := get_legal_moves(board)) else None
+    return random.choice(moves) if (moves := get_legal_moves(state)) else None
 
 
 def play_othello_game(
