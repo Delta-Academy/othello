@@ -4,7 +4,6 @@ from typing import List, Optional, Tuple
 
 from delta_utils import get_discrete_choose_move_out_checker
 from delta_utils.check_submission import check_submission as _check_submission
-
 from game_mechanics import get_empty_board, load_network
 
 
